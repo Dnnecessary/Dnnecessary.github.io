@@ -347,6 +347,16 @@ const CardPreview: React.FC<CardPreviewProps> = ({ previewRef }) => {
     .card-render hr { border: none; border-top: 1px solid ${sc(styles.dividerColor ?? styles.textColor)}30; margin: 12px 0; }
     .card-render a { color: ${sc(styles.linkColor ?? styles.accentColor)}; text-decoration: underline; }
     .card-render img { max-width: 100%; border-radius: 6px; }
+    .card-render mark {
+      /* 模板定义了 markBg 时优先使用模板色；否则保留行内 style 的用户选色（不覆盖 background） */
+      ${styles.markBg ? `background-color: ${sc(styles.markBg)} !important;` : ''}
+      /* 始终保证高亮可见的基础样式：圆角 + 水平内边距 + 无默认边框 */
+      border-radius: 3px;
+      padding: 1px 4px;
+      /* 高对比度环境下不丢失高亮（强制显示背景） */
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
   `;
   }, [styles, config.font]);
 

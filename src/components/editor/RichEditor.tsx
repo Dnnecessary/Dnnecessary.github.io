@@ -5,10 +5,11 @@ import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TextStyle } from '@tiptap/extension-text-style';
 import FontFamily from '@tiptap/extension-font-family';
+import Highlight from '@tiptap/extension-highlight';
 import {
-  Heading1, Heading2, Heading3, Bold, Italic,
+  Bold, Italic,
   List, ListOrdered, Quote, Minus, ImageIcon,
-  Table, Code2, ChevronDown,
+  Table, Code2, ChevronDown, Highlighter,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { compressImage } from '@/utils/imageCompressor';
@@ -240,6 +241,202 @@ const HeadingPicker: React.FC<{ editor: Editor }> = ({ editor }) => {
   );
 };
 
+// 高亮颜色选择器
+// ─── 预设 12 色 ────────────────────────────────────────────────────────────────
+const HIGHLIGHT_PRESET_COLORS: { color: string; label: string }[] = [
+  { color: '#FFF176', label: '柠檬黄' },
+  { color: '#FFEB3B', label: '明黄' },
+  { color: '#C8E6C9', label: '薄荷绿' },
+  { color: '#A5D6A7', label: '嫩绿' },
+  { color: '#B3E5FC', label: '天蓝' },
+  { color: '#90CAF9', label: '浅蓝' },
+  { color: '#FFCDD2', label: '樱花粉' },
+  { color: '#EF9A9A', label: '浅红' },
+  { color: '#FFE0B2', label: '暖橙' },
+  { color: '#FFCC80', label: '橙黄' },
+  { color: '#E1BEE7', label: '淡紫' },
+  { color: '#CE93D8', label: '薰衣草' },
+];
+
+// 默认高亮颜色（会话级记忆，刷新后恢复）
+const DEFAULT_HIGHLIGHT_COLOR = '#FFF176';
+
+/**
+ * 统计编辑器文档中当前高亮 mark 节点的数量。
+ * 遍历 ProseMirror 文档树，检测含 highlight 属性的 mark。
+ */
+function countHighlights(editor: Editor): number {
+  let count = 0;
+  editor.state.doc.descendants((node) => {
+    node.marks.forEach((mark) => {
+      if (mark.type.name === 'highlight') count++;
+    });
+  });
+  return count;
+}
+
+const HIGHLIGHT_MAX = 100;
+
+interface HighlightPickerProps {
+  editor: Editor;
+}
+
+const HighlightPicker: React.FC<HighlightPickerProps> = ({ editor }) => {
+  // 会话级：刷新后恢复默认色
+  const [activeColor, setActiveColor] = useState(DEFAULT_HIGHLIGHT_COLOR);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
+  // 点击外部关闭
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  /**
+   * 应用高亮：
+   * - 当前选区已有相同颜色高亮 → 移除（toggle）
+   * - 当前选区已有不同颜色高亮 → 覆盖为新颜色
+   * - 超出 100 处上限 → 提示用户，不应用
+   */
+  const applyHighlight = useCallback((color: string) => {
+    if (!editor) return;
+    // 如果选区为空，不操作
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      toast.info('请先选中文字，再应用高亮');
+      return;
+    }
+    // 检查是否已有同色高亮（触发 toggle 移除）
+    const isActive = editor.isActive('highlight', { color });
+    if (!isActive) {
+      // 非同色时检查上限
+      const current = countHighlights(editor);
+      if (current >= HIGHLIGHT_MAX) {
+        toast.warning(`高亮数量已达上限（${HIGHLIGHT_MAX} 处），请先清除部分高亮后再添加`);
+        return;
+      }
+    }
+    editor.chain().focus().toggleHighlight({ color }).run();
+    setActiveColor(color);
+    setOpen(false);
+  }, [editor]);
+
+  // 当前是否处于高亮激活状态（用于工具栏按钮激活样式）
+  const isHighlightActive = editor.isActive('highlight');
+
+  return (
+    <div className="relative flex items-center" ref={ref}>
+      {/* 主按钮：直接应用上次颜色 */}
+      <button
+        title={`高亮（${HIGHLIGHT_PRESET_COLORS.find(c => c.color === activeColor)?.label ?? '自定义'}）`}
+        onMouseDown={(e) => { e.preventDefault(); applyHighlight(activeColor); }}
+        className={`flex items-center justify-center w-7 h-7 rounded-l transition-colors text-sm flex-shrink-0 relative ${
+          isHighlightActive
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+        }`}
+      >
+        <Highlighter size={13} />
+        {/* 颜色条：展示当前选中颜色 */}
+        <span
+          className="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-sm"
+          style={{ width: 14, height: 3, background: activeColor, display: 'block' }}
+        />
+      </button>
+
+      {/* 箭头按钮：展开颜色面板 */}
+      <button
+        title="选择高亮颜色"
+        onMouseDown={(e) => { e.preventDefault(); setOpen(o => !o); }}
+        className={`flex items-center justify-center w-4 h-7 rounded-r transition-colors flex-shrink-0 border-l border-border/40 ${
+          open
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+        }`}
+      >
+        <ChevronDown size={10} />
+      </button>
+
+      {/* 颜色面板 */}
+      {open && (
+        <div className="absolute top-9 left-0 z-50 bg-popover border border-border rounded-xl shadow-lg p-3 w-52">
+          <div className="text-[10px] text-muted-foreground font-medium mb-2 uppercase tracking-wider">高亮颜色</div>
+
+          {/* 预设 12 色网格 */}
+          <div className="grid grid-cols-6 gap-1.5 mb-3">
+            {HIGHLIGHT_PRESET_COLORS.map(({ color, label }) => (
+              <button
+                key={color}
+                title={label}
+                onMouseDown={(e) => { e.preventDefault(); applyHighlight(color); }}
+                className="w-6 h-6 rounded-md border-2 transition-all hover:scale-110"
+                style={{
+                  background: color,
+                  borderColor: activeColor === color ? '#333' : 'transparent',
+                  outline: activeColor === color ? `2px solid ${color}88` : 'none',
+                  outlineOffset: '1px',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* 分割线 */}
+          <div className="border-t border-border mb-2.5" />
+
+          {/* 自定义颜色 */}
+          <div className="flex items-center gap-2">
+            <button
+              title="自定义颜色"
+              onMouseDown={(e) => { e.preventDefault(); colorInputRef.current?.click(); }}
+              className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              {/* 渐变色块代表自定义 */}
+              <span
+                className="w-5 h-5 rounded-md border border-border flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3)' }}
+              />
+              <span>自定义颜色…</span>
+            </button>
+            {/* 隐藏的原生颜色选择器 */}
+            <input
+              ref={colorInputRef}
+              type="color"
+              className="w-0 h-0 opacity-0 absolute"
+              defaultValue={activeColor}
+              onChange={(e) => {
+                // onChange 实时预览色块（不立即应用）
+                setActiveColor(e.target.value);
+              }}
+              onBlur={(e) => {
+                // 用户关闭颜色选择器时才应用
+                applyHighlight(e.target.value);
+              }}
+            />
+          </div>
+
+          {/* 移除高亮 */}
+          <button
+            onMouseDown={(e) => {
+              e.preventDefault();
+              editor.chain().focus().unsetHighlight().run();
+              setOpen(false);
+            }}
+            className="mt-1.5 w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          >
+            <span className="w-5 h-5 rounded-md border border-dashed border-border flex-shrink-0 flex items-center justify-center text-[10px]">✕</span>
+            <span>移除高亮</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // 主编辑器组件
 interface RichEditorProps {
   content: string;
@@ -295,6 +492,8 @@ const RichEditor: React.FC<RichEditorProps> = ({ content, onChange, globalFont, 
       Placeholder.configure({ placeholder: '输入内容，或输入 / 调起工具菜单…' }),
       TextStyle,
       FontFamily,
+      // multicolor：允许每个 mark 存储独立的 color 属性，生成 <mark style="background-color:...">
+      Highlight.configure({ multicolor: true }),
     ],
     content,
     onUpdate: ({ editor: e }) => {
@@ -374,6 +573,11 @@ const RichEditor: React.FC<RichEditorProps> = ({ content, onChange, globalFont, 
         }
         return false;
       },
+      // 粘贴 HTML 时剥离 <mark> 高亮标签，保留内部文字
+      // 场景：用户从外部网页/文档复制带高亮的内容粘贴进来，不应保留源高亮颜色
+      transformPastedHTML: (html: string) => {
+        return html.replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, '$1');
+      },
     },
   });
 
@@ -451,6 +655,8 @@ const RichEditor: React.FC<RichEditorProps> = ({ content, onChange, globalFont, 
         <ToolbarBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="斜体">
           <Italic size={13} />
         </ToolbarBtn>
+        {/* 高亮选色器：主按钮直接应用上次颜色，箭头展开 12 色 + 自定义 */}
+        <HighlightPicker editor={editor} />
         <div className="w-px h-4 bg-border mx-1" />
         <ToolbarBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title="无序列表">
           <List size={14} />

@@ -116,6 +116,9 @@ export interface TemplateStyles {
   olNumberColor?: string;
   // 超链接颜色（不设则继承 accentColor）
   linkColor?: string;
+  // 高亮背景色（模板定义时优先使用，否则由用户选色决定）
+  // 导出时统一附加 border-radius 和内边距
+  markBg?: string;
 }
 
 export const CODE_THEMES = [
