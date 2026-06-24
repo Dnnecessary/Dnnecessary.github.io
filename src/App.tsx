@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import IntersectObserver from '@/components/common/IntersectObserver';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { Toaster } from '@/components/ui/sonner';
 import { CardProvider } from '@/contexts/CardContext';
@@ -11,7 +10,6 @@ const App: React.FC = () => {
   return (
     <Router>
       <CardProvider>
-        <IntersectObserver />
         <div className="flex min-h-screen w-full">
           <main className="flex-1 min-w-0">
             {/* 全局兜底边界：任何页面级渲染错误不会白屏 */}

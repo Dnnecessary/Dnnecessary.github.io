@@ -9,9 +9,7 @@ const bohesuda: CardTemplate = {
   styles: {
     // 卡片基础
     cardBg: '#F0F9F6',
-    cardBorder: '1px solid #D8F3DC',
-    padding: '28px',
-    borderRadius: '12px',
+    cardBorder: 'none',
     shadow: '0 4px 20px rgba(45,106,79,0.08)',
 
     // 标题层次：H1→H2→H3 从深到浅
@@ -40,7 +38,6 @@ const bohesuda: CardTemplate = {
     blockquoteBorder: '#2D6A4F',  // 左侧竖线 森林绿
     blockquoteBg: '#F5FBF8',      // 引用块背景 极淡薄荷
     blockquoteText: '#2D6A4F',
-    blockquoteStyle: 'classic',
 
     // 代码块
     codeBg: '#E8F5E9',

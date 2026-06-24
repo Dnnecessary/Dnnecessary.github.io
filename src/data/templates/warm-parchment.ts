@@ -20,8 +20,6 @@ const warmParchment: CardTemplate = {
     headerDateColor: '#8B3A2A',
     headerTextColor: '#8B3A2A',
     dividerColor: '#C8B89A',
-    padding: '28px',
-    borderRadius: '12px',
     shadow: '0 2px 16px rgba(0,0,0,0.08)',
   },
 };

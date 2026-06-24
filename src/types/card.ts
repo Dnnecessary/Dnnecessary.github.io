@@ -53,6 +53,7 @@ export interface FontConfig {
 
 export interface CardConfig {
   pageMode: PageMode;
+  aspectRatio: string;
   font: FontConfig;
   header: CardHeaderConfig;
   footer: CardFooterConfig;
@@ -67,7 +68,7 @@ export interface CardTemplate {
   styles: TemplateStyles;
 }
 
-export type TemplateCategory = 'recommended' | 'all' | 'solid' | 'minimal' | 'creative' | 'academic' | 'business' | 'custom';
+export type TemplateCategory = 'recommended' | 'all';
 
 export interface TemplateStyles {
   cardBg: string;
@@ -87,8 +88,6 @@ export interface TemplateStyles {
   footerBg?: string;
   footerText?: string;
   dividerColor?: string;
-  padding: string;
-  borderRadius: string;
   shadow?: string;
   backgroundPattern?: string;
   // 标题 Banner 样式（苔笺、立体等模板 H1 使用全宽带背景 Banner）
@@ -96,16 +95,25 @@ export interface TemplateStyles {
   titleBannerTextColor?: string;
   // H2 单独颜色（立体模板 H2 用橙色）
   h2Color?: string;
+  // H2 牌匾样式（皮影戏等模板 H2 使用全宽带背景 Banner）
+  h2BannerBg?: string;
+  h2BannerTextColor?: string;
+  // H2 线穿样式（──── 标题 ────，中式风格）
+  h2LineStyle?: boolean;
   // H3 单独颜色
   h3Color?: string;
+  // H3 背景色（皮影戏等模板 H3 使用浅色背景标签）
+  h3BannerBg?: string;
   // 顶部装饰栏背景色（立体模板 macOS 风格顶栏）
   topBarBg?: string;
-  // 引用块样式：pill = 圆头竖线（默认），classic = 传统左边线右圆角
-  blockquoteStyle?: 'pill' | 'classic';
+  // 引用块样式：pill = 圆头竖线（默认），classic = 传统左边线，traditional = ▌前缀中式风格
+  blockquoteStyle?: 'pill' | 'classic' | 'traditional';
   // 引用块背景色（单独覆盖）
   blockquoteBg?: string;
   // 标题下方装饰短横线（杂志风格）
   titleDecorationBar?: boolean;
+  // 标题装饰线全宽（皮影戏等中式风格）
+  titleDecorationBarFullWidth?: boolean;
   // 列表符号形状：circle = 圆形（默认），square = 实心方块
   bulletShape?: 'circle' | 'square';
   // 斜体颜色
@@ -119,6 +127,23 @@ export interface TemplateStyles {
   // 高亮背景色（模板定义时优先使用，否则由用户选色决定）
   // 导出时统一附加 border-radius 和内边距
   markBg?: string;
+  // ─── 奶油文件夹模板专用属性 ─────────────────────────────────────────────────
+  // 外层页面背景（卡片外的背景色/渐变）
+  pageBg?: string;
+  // 启用文件夹缺口样式（卡片顶部缺口）
+  folderStyle?: boolean;
+  // 左上装饰条颜色
+  decorationBar?: string;
+  // 封面区/hero 背景色/渐变
+  heroBg?: string;
+  // 次要文字颜色（header 右侧文本等）
+  secondaryColor?: string;
+  // 信息卡片（tip）背景色
+  tipBg?: string;
+  // 信息卡片（tip）左边框色
+  tipBorder?: string;
+  // PRO 角标背景色
+  badgeBg?: string;
 }
 
 export const CODE_THEMES = [
@@ -141,4 +166,10 @@ export const FOOTER_STYLES: FooterStyle[] = [
   { id: 'style3', name: '样式三：纯文字' },
 ];
 
-export const DEFAULT_MARKDOWN = `<h1>欢迎使用墨迹文卡</h1><p>一个简单、优雅的文字卡片制作工具</p><h2>快速开始</h2><ol><li><p>在左侧编辑器输入或粘贴内容</p></li><li><p>选择喜欢的模板样式</p></li><li><p>一键导出精美卡片</p></li></ol><h2>支持功能</h2><ul><li><p><strong>富文本编辑</strong>：所见即所得，无需了解语法</p></li><li><p><strong>代码高亮</strong>：支持多种编程语言</p></li><li><p><strong>图片插入</strong>：粘贴或点击工具栏插入图片</p></li><li><p><strong>斜杠菜单</strong>：输入 / 快速插入任意块元素</p></li></ul><blockquote><p>开始你的创作之旅吧！</p></blockquote>`;
+export const DEFAULT_MARKDOWN = `<h1>欢迎使用墨迹文卡</h1>
+<p>一个简单、优雅的文字卡片制作工具</p>
+<h2>快速开始</h2>
+<ol><li>在左侧编辑器输入或粘贴内容</li><li>选择喜欢的模板样式</li><li>一键导出精美卡片</li></ol>
+<h2>支持功能</h2>
+<ul><li><strong>富文本编辑</strong>：所见即所得，无需了解语法</li><li><strong>代码高亮</strong>：支持多种编程语言</li><li><strong>图片插入</strong>：粘贴或点击工具栏插入图片</li><li><strong>斜杠菜单</strong>：输入 / 快速插入任意块元素</li></ul>
+<blockquote><p>开始你的创作之旅吧！</p></blockquote>`;

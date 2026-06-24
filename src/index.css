@@ -119,18 +119,18 @@ All colors MUST be HSL.
   }
 }
 
-/* 墨迹文卡 - 卡片内容渲染样式 */
-.card-preview-content {
+/* 墨迹文卡 - 卡片内容渲染样式（.card-render 是实际使用的 class） */
+.card-render {
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 
-.card-preview-content h1,
-.card-preview-content h2,
-.card-preview-content h3 {
+.card-render h1,
+.card-render h2,
+.card-render h3 {
   font-weight: 600;
 }
 
-.card-preview-content blockquote {
+.card-render blockquote {
   border-left: 3px solid hsl(var(--ink-red));
   padding-left: 12px;
   margin: 8px 0;
@@ -138,43 +138,43 @@ All colors MUST be HSL.
   color: hsl(var(--foreground) / 0.8);
 }
 
-.card-preview-content code {
+.card-render code {
   border-radius: 3px;
   padding: 1px 5px;
   font-size: 0.875em;
 }
 
-.card-preview-content pre {
+.card-render pre {
   border-radius: 6px;
   padding: 12px;
   overflow-x: auto;
   margin: 8px 0;
 }
 
-.card-preview-content table {
+.card-render table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.card-preview-content table th,
-.card-preview-content table td {
+.card-render table th,
+.card-render table td {
   border: 1px solid currentColor;
   padding: 6px 10px;
   opacity: 0.9;
 }
 
-.card-preview-content ul {
+.card-render ul {
   list-style: none;
   padding-left: 0;
 }
 
-.card-preview-content ol {
+.card-render ol {
   list-style: none;
   padding-left: 0;
   counter-reset: ol-counter;
 }
 
-.card-preview-content ol li {
+.card-render ol li {
   counter-increment: ol-counter;
   display: flex;
   align-items: flex-start;
@@ -182,7 +182,7 @@ All colors MUST be HSL.
   margin: 6px 0;
 }
 
-.card-preview-content ol li::before {
+.card-render ol li::before {
   content: counter(ol-counter);
   min-width: 22px;
   height: 22px;
@@ -195,11 +195,11 @@ All colors MUST be HSL.
   flex-shrink: 0;
 }
 
-.card-preview-content p {
+.card-render p {
   margin: 6px 0;
 }
 
-.card-preview-content hr {
+.card-render hr {
   border: none;
   border-top: 1px solid currentColor;
   opacity: 0.3;

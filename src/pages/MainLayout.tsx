@@ -85,7 +85,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* 左侧导航栏 */}
       <aside className="w-14 shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col items-center py-3 gap-1 z-20">
         {/* Logo */}
@@ -121,7 +121,7 @@ const MainLayout: React.FC = () => {
       </aside>
 
       {/* 左侧内容面板 */}
-      <div className="w-[320px] shrink-0 border-r border-border flex flex-col bg-card overflow-hidden">
+      <div className="w-72 sm:w-80 md:w-[320px] lg:w-[360px] shrink-0 border-r border-border flex flex-col bg-card overflow-hidden">
         {/* 各面板独立错误边界：面板崩溃不影响预览区 */}
         <ErrorBoundary title="面板渲染出错" className="flex-1">
           {renderPanel()}

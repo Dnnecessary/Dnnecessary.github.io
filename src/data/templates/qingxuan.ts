@@ -20,8 +20,6 @@ const qingxuan: CardTemplate = {
     headerDateColor: '#111827',
     headerTextColor: '#6B7280',
     dividerColor: '#E5E7EB',
-    padding: '28px',
-    borderRadius: '4px',
     shadow: 'none',
   },
 };

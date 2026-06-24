@@ -7,7 +7,7 @@ const taijian: CardTemplate = {
   category: 'recommended',
   styles: {
     cardBg: '#FEFAEE',
-    cardBorder: '2px dashed #D4C27A',
+    cardBorder: 'none',
     titleColor: '#2D5A3D',
     textColor: '#3D3020',
     accentColor: '#5B8A4A',
@@ -21,8 +21,6 @@ const taijian: CardTemplate = {
     headerDateColor: '#2D5A3D',
     headerTextColor: '#888860',
     dividerColor: '#D4C27A',
-    padding: '24px',
-    borderRadius: '12px',
     shadow: '0 2px 12px rgba(0,0,0,0.06)',
     titleBannerBg: '#2D5A3D',
     titleBannerTextColor: '#FFFFFF',

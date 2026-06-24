@@ -16,10 +16,11 @@
  *
  * useCardStore() 兼容层合并三个 hook，现有代码零改动即可使用。
  */
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import type { CardConfig, PageMode, WatermarkPosition } from '@/types/card';
 import { DEFAULT_MARKDOWN } from '@/types/card';
 import { BUILTIN_FONTS } from '@/hooks/useFontManager';
+import { TEMPLATES } from '@/data/templates';
 
 // ─── 公共类型 ─────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ export interface ConfigStore {
   setWatermarkPosition: (v: WatermarkPosition) => void;
   setWatermarkScale: (v: number) => void;
   setActiveTemplate: (id: string) => void;
+  setAspectRatio: (v: string) => void;
 }
 
 export interface MarkdownStore {
@@ -69,6 +71,7 @@ export type CardStore = MarkdownStore & ConfigStore & FontStore;
 // ─── 默认值 ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_FONT = BUILTIN_FONTS[0].family; // 思源黑体
+const CONFIG_STORAGE_KEY = 'mojika_card_config';
 
 /**
  * 在 Provider 首次挂载时获取当日日期，而非模块加载时。
@@ -78,6 +81,23 @@ const DEFAULT_FONT = BUILTIN_FONTS[0].family; // 思源黑体
 function getTodayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function loadSavedConfig(): Partial<CardConfig> | null {
+  try {
+    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Partial<CardConfig>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveConfig(config: CardConfig) {
+  try {
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    // 忽略存储失败（如隐私模式）
+  }
 }
 
 const defaultConfig: CardConfig = {
@@ -115,6 +135,7 @@ const defaultConfig: CardConfig = {
     scale: 0.3,
   },
   activeTemplateId: 'warm-parchment',
+  aspectRatio: '3:4',
 };
 
 // ─── Context 定义 ─────────────────────────────────────────────────────────────
@@ -127,13 +148,27 @@ const FontContext     = createContext<FontStore | null>(null);
 
 export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [markdown, setMarkdown] = useState(DEFAULT_MARKDOWN);
-  // useState 惰性初始化：() => {...} 仅在 Provider 首次挂载时执行一次，
-  // 确保 header.date 取的是应用实际开启时的当天日期，而非模块加载时的日期。
-  const [config, setConfig] = useState<CardConfig>(() => ({
-    ...defaultConfig,
-    header: { ...defaultConfig.header, date: getTodayStr() },
-  }));
+
+  // useState 惰性初始化：() => {...} 仅在 Provider 首次挂载时执行一次
+  // 优先从 localStorage 恢复保存的配置，日期始终取当天
+  const [config, setConfig] = useState<CardConfig>(() => {
+    const saved = loadSavedConfig();
+    return {
+      ...defaultConfig,
+      ...saved,
+      font: { ...defaultConfig.font, ...(saved?.font ?? {}) },
+      header: { ...defaultConfig.header, ...(saved?.header ?? {}), date: getTodayStr() },
+      footer: { ...defaultConfig.footer, ...(saved?.footer ?? {}) },
+      watermark: { ...defaultConfig.watermark, ...(saved?.watermark ?? {}) },
+    };
+  });
+
   const [globalFont, setGlobalFont] = useState(DEFAULT_FONT);
+
+  // 配置变化时自动持久化到 localStorage
+  useEffect(() => {
+    saveConfig(config);
+  }, [config]);
 
   const update = useCallback((fn: (c: CardConfig) => CardConfig) => {
     setConfig(prev => fn(prev));
@@ -167,7 +202,12 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setWatermarkOpacity  = useCallback((v: number)             => update(c => ({ ...c, watermark: { ...c.watermark, opacity: v } })), [update]);
   const setWatermarkPosition = useCallback((v: WatermarkPosition)  => update(c => ({ ...c, watermark: { ...c.watermark, position: v } })), [update]);
   const setWatermarkScale    = useCallback((v: number)             => update(c => ({ ...c, watermark: { ...c.watermark, scale: v } })), [update]);
-  const setActiveTemplate    = useCallback((id: string)            => update(c => ({ ...c, activeTemplateId: id })), [update]);
+  const setActiveTemplate    = useCallback((id: string) => {
+    update(c => {
+      return { ...c, activeTemplateId: id };
+    });
+  }, [update]);
+  const setAspectRatio       = useCallback((v: string)             => update(c => ({ ...c, aspectRatio: v })), [update]);
 
   // ConfigStore：config 变化时重建，但所有 setter 引用稳定（不因 config 变化而重建）
   const configStore: ConfigStore = useMemo(() => ({
@@ -177,7 +217,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setHeaderEnabled, setHeaderStyleId, setHeaderDate, setHeaderText, setHeaderText2, setHeaderAvatarUrl,
     setFooterEnabled, setFooterStyleId, setFooterQrcodeType, setFooterQrcodeValue, setFooterText1, setFooterText2,
     setWatermarkEnabled, setWatermarkImageUrl, setWatermarkOpacity, setWatermarkPosition, setWatermarkScale,
-    setActiveTemplate,
+    setActiveTemplate, setAspectRatio,
   }), [
     config,
     setPageMode, setBaseFontSize, setLineHeight,
@@ -185,7 +225,7 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setHeaderEnabled, setHeaderStyleId, setHeaderDate, setHeaderText, setHeaderText2, setHeaderAvatarUrl,
     setFooterEnabled, setFooterStyleId, setFooterQrcodeType, setFooterQrcodeValue, setFooterText1, setFooterText2,
     setWatermarkEnabled, setWatermarkImageUrl, setWatermarkOpacity, setWatermarkPosition, setWatermarkScale,
-    setActiveTemplate,
+    setActiveTemplate, setAspectRatio,
   ]);
 
   // MarkdownStore：仅在 markdown 变化时重建（击键场景）
@@ -213,14 +253,21 @@ export const CardProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 // ─── 精细化 Hook ──────────────────────────────────────────────────────────────
 
-const noop = () => {};
+// 类型安全的 noop：strict 模式下 () => {} 不能赋给 (v: T) => void
+const noopVoid = () => {};
+const noopStr = (_v: string) => {};
+const noopNum = (_v: number) => {};
+const noopBool = (_v: boolean) => {};
+const noopQrType = (_v: 'link' | 'text') => {};
+const noopWmPos = (_v: WatermarkPosition) => {};
+const noopPageMode = (_v: PageMode) => {};
 
 /** 仅订阅 markdown，击键时只重渲编辑器和预览 */
 export const useMarkdown = (): MarkdownStore => {
   const ctx = useContext(MarkdownContext);
   if (!ctx) {
     if (!import.meta.env.DEV) throw new Error('useMarkdown must be used within CardProvider');
-    return { markdown: '', setMarkdown: noop };
+    return { markdown: '', setMarkdown: noopStr };
   }
   return ctx;
 };
@@ -232,15 +279,15 @@ export const useConfig = (): ConfigStore => {
     if (!import.meta.env.DEV) throw new Error('useConfig must be used within CardProvider');
     return {
       config: defaultConfig,
-      setPageMode: noop, setBaseFontSize: noop, setLineHeight: noop,
-      setTitleLinked: noop, setTitleFontSize: noop, setTableLinked: noop,
-      setTableFontSize: noop, setCodeTheme: noop, setHeaderEnabled: noop,
-      setHeaderStyleId: noop, setHeaderDate: noop, setHeaderText: noop,
-      setHeaderText2: noop, setHeaderAvatarUrl: noop, setFooterEnabled: noop,
-      setFooterStyleId: noop, setFooterQrcodeType: noop, setFooterQrcodeValue: noop,
-      setFooterText1: noop, setFooterText2: noop, setWatermarkEnabled: noop,
-      setWatermarkImageUrl: noop, setWatermarkOpacity: noop, setWatermarkPosition: noop,
-      setWatermarkScale: noop, setActiveTemplate: noop,
+      setPageMode: noopPageMode, setBaseFontSize: noopNum, setLineHeight: noopNum,
+      setTitleLinked: noopBool, setTitleFontSize: noopNum, setTableLinked: noopBool,
+      setTableFontSize: noopNum, setCodeTheme: noopStr, setHeaderEnabled: noopBool,
+      setHeaderStyleId: noopStr, setHeaderDate: noopStr, setHeaderText: noopStr,
+      setHeaderText2: noopStr, setHeaderAvatarUrl: noopStr, setFooterEnabled: noopBool,
+      setFooterStyleId: noopStr, setFooterQrcodeType: noopQrType, setFooterQrcodeValue: noopStr,
+      setFooterText1: noopStr, setFooterText2: noopStr, setWatermarkEnabled: noopBool,
+      setWatermarkImageUrl: noopStr, setWatermarkOpacity: noopNum, setWatermarkPosition: noopWmPos,
+      setWatermarkScale: noopNum, setActiveTemplate: noopStr, setAspectRatio: noopStr,
     };
   }
   return ctx;
@@ -251,7 +298,7 @@ export const useFontContext = (): FontStore => {
   const ctx = useContext(FontContext);
   if (!ctx) {
     if (!import.meta.env.DEV) throw new Error('useFontContext must be used within CardProvider');
-    return { globalFont: DEFAULT_FONT, setGlobalFont: noop };
+    return { globalFont: DEFAULT_FONT, setGlobalFont: noopStr };
   }
   return ctx;
 };

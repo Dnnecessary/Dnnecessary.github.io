@@ -1,8 +1,15 @@
+/**
+ * AuthContext — Supabase 认证上下文（未启用）
+ *
+ * 依赖 @supabase/supabase-js 和 src/db/supabase.ts。
+ * 当前项目仅有一条公开路由（/），未接入认证流程。
+ * 当项目启用用户系统后，在 App.tsx 中添加 <AuthProvider> 包裹即可。
+ *
+ * @deprecated 未启用，暂不在 App 中使用
+ */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-// @ts-ignore
 import { supabase } from '@/db/supabase';
 import type { User } from '@supabase/supabase-js';
-// @ts-ignore
 import type { Profile } from '@/types/types';
 import { toast } from 'sonner';
 

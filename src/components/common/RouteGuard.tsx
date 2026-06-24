@@ -1,3 +1,11 @@
+/**
+ * RouteGuard — 路由守卫（未启用）
+ *
+ * 依赖 AuthContext + Supabase 认证，当前项目未接入认证流程。
+ * 当项目启用用户系统后，在 App.tsx 中包裹 <AuthProvider><RouteGuard>... 即可。
+ *
+ * @deprecated 未启用，暂不在路由中使用
+ */
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';

@@ -20,10 +20,7 @@ const yuankong: CardTemplate = {
     headerDateColor: '#111111',
     headerTextColor: '#888888',
     dividerColor: '#eeeeee',
-    padding: '32px',
-    borderRadius: '0px',
     shadow: 'none',
-    blockquoteStyle: 'classic',
   },
 };
 

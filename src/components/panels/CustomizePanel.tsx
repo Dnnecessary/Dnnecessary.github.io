@@ -2,7 +2,7 @@ import React from 'react';
 import { useConfig } from '@/contexts/CardContext';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Link2, Unlink2, FileText, Columns2 } from 'lucide-react';
+import { Link2, Unlink2, FileText, Columns2, Proportions } from 'lucide-react';
 import { CODE_THEMES } from '@/types/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -45,6 +45,7 @@ const CustomizePanel: React.FC = () => {
   const {
     config,
     setPageMode,
+    setAspectRatio,
     setBaseFontSize,
     setLineHeight,
     setTitleLinked,
@@ -93,6 +94,29 @@ const CustomizePanel: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* 卡片比例 — 仅分页模式显示 */}
+        {config.pageMode === 'paged' && (
+          <div className="mb-4">
+            <span className="text-sm text-foreground block mb-2">卡片比例</span>
+            <div className="grid grid-cols-4 gap-2">
+              {['1:1', '3:4', '3:5', '2:3', '1:2', '9:16', '9:19', '9:21'].map((ratio) => (
+                <button
+                  key={ratio}
+                  onClick={() => setAspectRatio(ratio)}
+                  className={`flex items-center justify-center gap-1 py-2 px-1 rounded-md border text-sm transition-all ${
+                    config.aspectRatio === ratio
+                      ? 'bg-card border-primary text-primary font-medium'
+                      : 'border-border text-muted-foreground hover:border-border/80'
+                  }`}
+                >
+                  <Proportions size={12} />
+                  {ratio}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 字体样式 */}
         <SectionLabel>字体样式</SectionLabel>

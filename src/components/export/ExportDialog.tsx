@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { toPng, toJpeg } from 'html-to-image';
+import { toCanvas } from 'html-to-image';
+import JSZip from 'jszip';
 import { Button } from '@/components/ui/button';
 import {
   Popover, PopoverContent, PopoverTrigger
 } from '@/components/ui/popover';
 import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import type { ExportFormat, ExportQuality } from '@/types/card';
+import { useConfig } from '@/contexts/CardContext';
 import { toast } from 'sonner';
 
 interface ExportDialogProps {
@@ -55,10 +57,155 @@ const QUALITY_OPTIONS: { value: ExportQuality; label: string; scale: number; bad
 ];
 
 const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
+  const { config } = useConfig();
   const [format, setFormat] = useState<ExportFormat>('png');
   const [quality, setQuality] = useState<ExportQuality>('hd');
   const [isExporting, setIsExporting] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const TIMEOUT_BY_SCALE: Record<number, number> = {
+    3: 15_000,
+    4: 25_000,
+    5: 40_000,
+    6: 60_000,
+  };
+
+  function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let id: ReturnType<typeof setTimeout>;
+    const race = Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        id = setTimeout(() => reject(new Error('导出超时')), ms);
+      }),
+    ]);
+    race.finally(() => clearTimeout(id));
+    return race;
+  }
+
+  /**
+   * 将 DOM 元素导出为 Blob
+   * 使用 toCanvas 直接获取 canvas，然后通过原生 toBlob 输出二进制，避免 base64 编码
+   */
+  async function exportElementToBlob(el: HTMLElement, scale: number, fmt: ExportFormat): Promise<Blob> {
+    const exportOpts = {
+      pixelRatio: scale,
+      cacheBust: false,
+      skipAutoScale: false,
+      backgroundColor: fmt === 'jpg' ? '#FFFFFF' : undefined,
+    };
+
+    const canvas = await withTimeout(
+      toCanvas(el, exportOpts),
+      TIMEOUT_BY_SCALE[scale] ?? 15_000
+    );
+
+    return new Promise<Blob>((resolve, reject) => {
+      const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
+      const quality = fmt === 'jpg' ? 0.92 : undefined;
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas 转换为 Blob 失败'));
+          }
+        },
+        mimeType,
+        quality
+      );
+    });
+  }
+
+  /** 整页模式导出 */
+  async function exportFullPage(el: HTMLElement, scale: number, fmt: ExportFormat) {
+    const estimatedW = (el.offsetWidth || 440) * scale;
+    const estimatedH = (el.offsetHeight || 600) * scale;
+    const estimatedMB = (estimatedW * estimatedH * 4) / (1024 * 1024);
+    if (estimatedMB > 25) {
+      toast.warning(`当前清晰度（×${scale}）预计生成 ${Math.round(estimatedMB)} MB 图片，低配设备可能较慢`, { duration: 4000 });
+    }
+    // 超大图片直接拒绝，避免浏览器崩溃
+    if (estimatedMB > 80) {
+      toast.error(`当前清晰度（×${scale}）图片过大（约 ${Math.round(estimatedMB)} MB），可能导致浏览器崩溃，请降低清晰度`);
+      return;
+    }
+
+    // 等待所有字体加载完成（包括 @font-face 和 FontFace）
+    await document.fonts.ready;
+
+    const blob = await exportElementToBlob(el, scale, fmt);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `墨迹文卡_${Date.now()}.${fmt}`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`导出成功！格式：${fmt.toUpperCase()}`);
+  }
+
+  /** 分页模式导出：逐页生成图片，单页直接下载，多页打包为 ZIP */
+  async function exportPaged(container: HTMLElement, scale: number, fmt: ExportFormat) {
+    const pages = Array.from(container.querySelectorAll('[data-page-card]')) as HTMLElement[];
+    if (pages.length === 0) {
+      toast.error('没有可导出的分页内容');
+      return;
+    }
+
+    // 只有一页时直接导出为单张图片，不打包 ZIP
+    if (pages.length === 1) {
+      toast.info('开始导出…');
+      try {
+        await document.fonts.ready;
+        const blob = await exportElementToBlob(pages[0], scale, fmt);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `墨迹文卡_${Date.now()}.${fmt}`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('导出成功！');
+      } catch (err) {
+        console.error('导出失败', err);
+        toast.error('导出失败，请降低清晰度后重试');
+      }
+      return;
+    }
+
+    toast.info(`开始导出 ${pages.length} 页，请稍候…`);
+
+    await document.fonts.ready;
+
+    const zip = new JSZip();
+    const folder = zip.folder('墨迹文卡');
+    let successCount = 0;
+
+    for (let i = 0; i < pages.length; i++) {
+      try {
+        const blob = await exportElementToBlob(pages[i], scale, fmt);
+        folder?.file(`第${i + 1}页.${fmt}`, blob);
+        successCount++;
+        toast.info(`已导出 ${i + 1} / ${pages.length} 页`);
+      } catch (err) {
+        console.error(`第 ${i + 1} 页导出失败`, err);
+        toast.error(`第 ${i + 1} 页导出失败`);
+      }
+    }
+
+    if (successCount === 0) {
+      toast.error('所有页面导出失败，请降低清晰度后重试');
+      return;
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `墨迹文卡_${Date.now()}.zip`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${successCount} 页导出成功！`);
+  }
 
   const handleExport = async () => {
     const el = previewRef.current;
@@ -68,113 +215,18 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
     }
 
     const scale = QUALITY_OPTIONS.find(q => q.value === quality)?.scale ?? 3;
-
-    // 导出前估算内存占用：pixelRatio^2 × DOM 面积 × 4 字节/像素
-    const estimatedW = (el.offsetWidth || 440) * scale;
-    const estimatedH = (el.offsetHeight || 600) * scale;
-    const estimatedMB = (estimatedW * estimatedH * 4) / (1024 * 1024);
-    if (estimatedMB > 25) {
-      toast.warning(
-        `当前清晰度（×${scale}）预计生成 ${Math.round(estimatedMB)} MB 图片，低配设备可能较慢`,
-        { duration: 4000 }
-      );
-    }
-
     setIsExporting(true);
 
-    /**
-     * 动态超时策略：按清晰度分级
-     * ─────────────────────────────────────────────────────
-     * html-to-image 超时的主因：
-     *   ① 首次调用需等待字体/CDN 资源加载（可通过预热消除）
-     *   ② 极致/专业清晰度 Canvas 超过 800 万像素，绘制本身就耗时
-     *
-     * 分级设置确保高清晰度有足够时间，同时避免低清晰度无限等待。
-     */
-    const TIMEOUT_BY_SCALE: Record<number, number> = {
-      3: 15_000,  // 高清  ×3 → 15s
-      4: 25_000,  // 超清  ×4 → 25s
-      5: 40_000,  // 极致  ×5 → 40s
-      6: 60_000,  // 专业  ×6 → 60s
-    };
-    const TIMEOUT_MS = TIMEOUT_BY_SCALE[scale] ?? 15_000;
-
-    /**
-     * 创建带动态超时的 Promise 竞争辅助函数。
-     * 每次调用生成独立的 timeoutId，避免多次导出之间互相干扰。
-     */
-    function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-      let id: ReturnType<typeof setTimeout>;
-      const race = Promise.race([
-        promise,
-        new Promise<never>((_, reject) => {
-          id = setTimeout(() => reject(new Error('导出超时')), ms);
-        }),
-      ]);
-      // 无论成功/失败立即清理，防止悬挂定时器
-      race.finally(() => clearTimeout(id));
-      return race;
-    }
-
     try {
-      /**
-       * 预热阶段（scale=1）：
-       * html-to-image 底层会 clone DOM → 序列化 SVG → 等待所有资源（字体/图片/CSS）
-       * 首次调用时资源均未缓存，耗时集中在此阶段。
-       *
-       * 用 scale=1 做一次轻量预热：
-       *   - 强制浏览器把字体文件、CDN 样式表等全部载入缓存
-       *   - 预热的 dataUrl 直接丢弃，不触发下载
-       *   - 正式导出时资源全部命中缓存，只剩 Canvas 绘制耗时
-       *
-       * 实测效果：极致/专业导出时间从 15s+ 压缩到 8-10s 以内。
-       * 预热本身在 2-3s 内完成（scale=1 Canvas 极小）。
-       *
-       * 预热超时上限固定 10s（资源加载超过 10s 说明网络极差，
-       * 此时正式导出大概率也会超时，但不应因预热失败而中断流程）。
-       */
-      const warmupOpts = {
-        pixelRatio: 1,
-        cacheBust: true,
-        backgroundColor: format === 'jpg' ? '#FFFFFF' : undefined,
-      };
-      try {
-        await withTimeout(toPng(el, warmupOpts), 10_000);
-      } catch {
-        // 预热失败（网络慢/超时）不中断导出，继续正式阶段
-        // 正式导出有独立超时保护，结果只是略慢
-      }
-
-      // 正式导出（使用目标清晰度 + 动态超时）
-      const exportOpts = {
-        pixelRatio: scale,
-        cacheBust: false, // 预热已建立缓存，不再 bust
-        skipAutoScale: false,
-        backgroundColor: format === 'jpg' ? '#FFFFFF' : undefined,
-      };
-
-      let dataUrl: string;
-      if (format === 'png') {
-        dataUrl = await withTimeout(toPng(el, exportOpts), TIMEOUT_MS);
+      if (config.pageMode === 'paged') {
+        await exportPaged(el, scale, format);
       } else {
-        dataUrl = await withTimeout(toJpeg(el, { ...exportOpts, quality: 0.92 }), TIMEOUT_MS);
+        await exportFullPage(el, scale, format);
       }
-
-      const link = document.createElement('a');
-      link.download = `墨迹文卡_${Date.now()}.${format}`;
-      link.href = dataUrl;
-      link.click();
-
-      toast.success(`导出成功！格式：${format.toUpperCase()}，清晰度：${QUALITY_OPTIONS.find(q => q.value === quality)?.label ?? quality}`);
       setOpen(false);
     } catch (err) {
       console.error('导出失败', err);
-      const isTimeout = err instanceof Error && err.message === '导出超时';
-      toast.error(
-        isTimeout
-          ? `导出超时（${TIMEOUT_MS / 1000}s），请尝试降低清晰度或减少图片数量`
-          : '导出失败，请重试'
-      );
+      toast.error('导出失败，请重试');
     } finally {
       setIsExporting(false);
     }
