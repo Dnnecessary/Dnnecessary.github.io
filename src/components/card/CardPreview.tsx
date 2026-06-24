@@ -275,7 +275,7 @@ const CardPreview: React.FC<CardPreviewProps> = ({ previewRef }) => {
             ref={(el) => { pageRefs.current[i] = el; }}
             data-page-card
             style={{
-              width: '440px',
+              width: 'min(440px, 100%)',
               height: `${pageHeight}px`,
               background: styles.pageBg ?? styles.cardBg,
               border: styles.pageBg ? 'none' : (styles.cardBorder ?? 'none'),

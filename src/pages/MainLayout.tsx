@@ -8,11 +8,12 @@ import ExportDialog from '@/components/export/ExportDialog';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import {
   PenLine, LayoutTemplate, Sliders, Layers, Bot,
-  HelpCircle, User
+  HelpCircle, User, Eye
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-type NavTab = 'editor' | 'template' | 'customize' | 'widgets' | 'ai' | 'help' | 'user';
+type NavTab = 'editor' | 'template' | 'customize' | 'widgets' | 'preview' | 'ai' | 'help' | 'user';
 
 interface NavItem {
   id: NavTab;
@@ -27,6 +28,15 @@ const NAV_ITEMS_TOP: NavItem[] = [
   { id: 'customize', icon: <Sliders size={18} />, label: '自定义' },
   { id: 'widgets', icon: <Layers size={18} />, label: '小组件' },
   { id: 'ai', icon: <Bot size={18} />, label: 'AI助手', disabled: true },
+];
+
+// 移动端导航项（含预览 Tab）
+const NAV_ITEMS_MOBILE: NavItem[] = [
+  { id: 'editor', icon: <PenLine size={20} />, label: '编辑' },
+  { id: 'template', icon: <LayoutTemplate size={20} />, label: '模板' },
+  { id: 'preview', icon: <Eye size={20} />, label: '预览' },
+  { id: 'customize', icon: <Sliders size={20} />, label: '自定义' },
+  { id: 'widgets', icon: <Layers size={20} />, label: '小组件' },
 ];
 
 const NAV_ITEMS_BOTTOM: NavItem[] = [
@@ -70,9 +80,28 @@ const NavButton: React.FC<NavButtonProps> = ({ item, isActive, onSelect }) => (
   </TooltipProvider>
 );
 
+// 移动端底部 Tab 按钮
+const MobileTabButton: React.FC<NavButtonProps> = ({ item, isActive, onSelect }) => (
+  <button
+    onClick={() => !item.disabled && onSelect(item.id)}
+    disabled={item.disabled}
+    className={`flex-1 flex flex-col items-center gap-0.5 py-2 transition-all ${
+      item.disabled
+        ? 'opacity-40 cursor-not-allowed'
+        : isActive
+        ? 'text-primary'
+        : 'text-muted-foreground'
+    }`}
+  >
+    {item.icon}
+    <span className="text-[10px] leading-tight">{item.label}</span>
+  </button>
+);
+
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('editor');
   const previewRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const renderPanel = () => {
     switch (activeTab) {
@@ -84,6 +113,54 @@ const MainLayout: React.FC = () => {
     }
   };
 
+  // ─── 移动端布局 ────────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="flex flex-col h-[100dvh] w-full bg-background overflow-hidden">
+        {/* 顶部工具栏 */}
+        <header className="h-11 shrink-0 flex items-center justify-between px-3 border-b border-border bg-background/80 backdrop-blur-sm z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+              <PenLine size={12} className="text-primary-foreground" />
+            </div>
+            <span className="text-sm font-medium text-foreground">墨迹文卡</span>
+          </div>
+          <ExportDialog previewRef={previewRef} />
+        </header>
+
+        {/* 内容区：面板或预览 */}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {activeTab === 'preview' ? (
+            <main className="h-full overflow-y-auto overflow-x-hidden bg-muted/40 py-4 px-3 flex items-start justify-center">
+              <div className="w-full flex justify-center">
+                <ErrorBoundary title="预览渲染出错" className="w-full min-h-[300px]">
+                  <CardPreview previewRef={previewRef} />
+                </ErrorBoundary>
+              </div>
+            </main>
+          ) : (
+            <ErrorBoundary title="面板渲染出错" className="h-full">
+              {renderPanel()}
+            </ErrorBoundary>
+          )}
+        </div>
+
+        {/* 底部 Tab 栏 */}
+        <nav className="shrink-0 bg-card border-t border-border flex items-center pb-[env(safe-area-inset-bottom)]">
+          {NAV_ITEMS_MOBILE.map(item => (
+            <MobileTabButton
+              key={item.id}
+              item={item}
+              isActive={activeTab === item.id}
+              onSelect={setActiveTab}
+            />
+          ))}
+        </nav>
+      </div>
+    );
+  }
+
+  // ─── 桌面端布局（含 iPad） ─────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* 左侧导航栏 */}
@@ -122,7 +199,6 @@ const MainLayout: React.FC = () => {
 
       {/* 左侧内容面板 */}
       <div className="w-72 sm:w-80 md:w-[320px] lg:w-[360px] shrink-0 border-r border-border flex flex-col bg-card overflow-hidden">
-        {/* 各面板独立错误边界：面板崩溃不影响预览区 */}
         <ErrorBoundary title="面板渲染出错" className="flex-1">
           {renderPanel()}
         </ErrorBoundary>
@@ -135,7 +211,7 @@ const MainLayout: React.FC = () => {
           <ExportDialog previewRef={previewRef} />
         </header>
 
-        {/* 预览区独立错误边界：预览崩溃不影响编辑面板 */}
+        {/* 预览区 */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/40 p-8 flex items-start justify-center">
           <div className="w-full flex justify-center">
             <ErrorBoundary title="预览渲染出错" className="w-full max-w-[440px] min-h-[300px]">
