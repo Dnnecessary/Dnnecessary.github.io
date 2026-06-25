@@ -30,6 +30,5 @@ history/*.json
 tasks
 .workbuddy
 
-# 构建产物，由平台自动生成
-dist
-assets/
+# 根目录下的旧构建产物（Vite dev server 静态文件）
+/assets/
