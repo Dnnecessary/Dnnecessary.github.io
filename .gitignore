@@ -30,5 +30,6 @@ history/*.json
 tasks
 .workbuddy
 
-# dist 需要保留用于 Gitee Pages 部署
-# dist
+# 构建产物，由平台自动生成
+dist
+assets/
