@@ -15,6 +15,7 @@ const zazhi: CardTemplate = {
     listNumberColor: '#FFFFFF',
     bulletColor: '#2C3E50',
     blockquoteBorder: '#2C3E50',
+    blockquoteBg: '#F0F0F0',
     blockquoteText: '#555555',
     codeBg: '#F4F4F4',
     codeText: '#2C3E50',

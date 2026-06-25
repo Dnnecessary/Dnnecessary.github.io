@@ -15,6 +15,7 @@ const taijian: CardTemplate = {
     listNumberColor: '#FFFFFF',
     bulletColor: '#3D3020',
     blockquoteBorder: '#C8A840',
+    blockquoteBg: '#F5EFD8',
     blockquoteText: '#6B5020',
     codeBg: '#F5EFD8',
     codeText: '#3D3020',

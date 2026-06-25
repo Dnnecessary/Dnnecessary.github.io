@@ -18,6 +18,7 @@ const piyingxi: CardTemplate = {
     bulletColor: '#D4A12A',
     // 引用块：▌前缀中式风格
     blockquoteBorder: '#234A83',
+    blockquoteBg: '#E9EDF3',
     blockquoteText: '#304B75',
     blockquoteStyle: 'traditional',
     // 代码

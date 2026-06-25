@@ -14,6 +14,7 @@ const qingxuan: CardTemplate = {
     listNumberColor: '#FFFFFF',
     bulletColor: '#374151',
     blockquoteBorder: '#93C5FD',
+    blockquoteBg: '#EFF6FF',
     blockquoteText: '#374151',
     codeBg: '#EFF6FF',
     codeText: '#1E40AF',

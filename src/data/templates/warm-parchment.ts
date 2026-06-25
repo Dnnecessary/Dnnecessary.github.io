@@ -14,6 +14,7 @@ const warmParchment: CardTemplate = {
     listNumberColor: '#FFFFFF',
     bulletColor: '#3D3020',
     blockquoteBorder: '#C85A3A',
+    blockquoteBg: '#EDE8D8',
     blockquoteText: '#6B5040',
     codeBg: '#EDE8D8',
     codeText: '#3D3020',

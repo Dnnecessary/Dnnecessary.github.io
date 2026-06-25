@@ -14,6 +14,7 @@ const yuankong: CardTemplate = {
     listNumberColor: '#FFFFFF',
     bulletColor: '#333333',
     blockquoteBorder: '#e0e0e0',
+    blockquoteBg: '#E3F5FB',
     blockquoteText: '#555555',
     codeBg: '#f4f4f4',
     codeText: '#222222',

@@ -30,5 +30,5 @@ history/*.json
 tasks
 .workbuddy
 
-# 根目录下的旧构建产物（Vite dev server 静态文件）
-/assets/
+# 根目录下的旧构建产物（Vite dev server 静态文件）— 不忽略，GitHub Pages 需要
+# /assets/
