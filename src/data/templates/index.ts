@@ -8,7 +8,6 @@ import bohesuda from './bohesuda';
 import piyingxi from './piyingxi';
 import mushanzi from './mushanzi';
 import shenhaiblue from './shenhaiblue';
-import naiyouwenjianjia from './naiyouwenjianjia';
 
 // 所有模板按展示顺序汇总，新增模板只需 import 后加入此数组
 export const TEMPLATES: CardTemplate[] = [
@@ -21,7 +20,6 @@ export const TEMPLATES: CardTemplate[] = [
   piyingxi,
   mushanzi,
   shenhaiblue,
-  naiyouwenjianjia,
 ];
 
 export const CATEGORY_LABELS: Record<string, string> = {

@@ -31,13 +31,13 @@ export const CardStyleEngine: React.FC<CardStyleEngineProps> = ({ styles }) => {
     const blockquoteBg = sc(styles.blockquoteBg, '#F5F5F5');
     return styles.blockquoteStyle === 'classic'
       ? `
-    .card-render blockquote { border-left: 5px solid ${sc(styles.blockquoteBorder)}; background: ${blockquoteBg}; padding: 16px 20px; margin: 10px 0; border-radius: 0 4px 4px 0; }
-    .card-render blockquote::before { display: none; }
-    .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)}; font-style: normal; margin: 0; }`
+    .card-render blockquote { border: none !important; border-left: 5px solid ${sc(styles.blockquoteBorder)} !important; background: ${blockquoteBg} !important; padding: 16px 20px !important; margin: 10px 0 !important; border-radius: 0 4px 4px 0 !important; }
+    .card-render blockquote::before { display: none !important; }
+    .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)} !important; font-style: normal !important; margin: 0 !important; }`
       : `
-    .card-render blockquote { position: relative; padding: 12px 16px 12px 22px; margin: 10px 0; background: ${blockquoteBg}; border-radius: 8px; overflow: hidden; }
-    .card-render blockquote::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: ${sc(styles.blockquoteBorder)}; border-radius: 0 3px 3px 0; }
-    .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)}; font-style: normal; margin: 0; }`;
+    .card-render blockquote { border: none !important; position: relative; padding: 12px 16px 12px 22px !important; margin: 10px 0 !important; background: ${blockquoteBg} !important; border-radius: 8px !important; overflow: hidden !important; }
+    .card-render blockquote::before { content: "" !important; position: absolute !important; left: 0 !important; top: 0 !important; bottom: 0 !important; width: 5px !important; background: ${sc(styles.blockquoteBorder)} !important; border-radius: 0 3px 3px 0 !important; }
+    .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)} !important; font-style: normal !important; margin: 0 !important; }`;
   }, [styles.blockquoteStyle, styles.blockquoteBg, styles.blockquoteBorder, styles.blockquoteText, styles.textColor]);
 
   // ─── H1 标题样式 ─────────────────────────────────────────────────────────────
@@ -162,15 +162,15 @@ export const CardStyleEngine: React.FC<CardStyleEngineProps> = ({ styles }) => {
     if (styles.folderStyle) {
       css.push(`
         .card-folder .card-render blockquote {
-          background: ${sc(styles.blockquoteBg, '#F4ECDD')};
-          border-radius: 22px;
-          border: none;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-          padding: 16px 20px;
-          margin: 18px 0px 16px 0px;
+          background: ${sc(styles.blockquoteBg, '#F4ECDD')} !important;
+          border-radius: 22px !important;
+          border: none !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+          padding: 16px 20px !important;
+          margin: 18px 0px 16px 0px !important;
         }
-        .card-folder .card-render blockquote::before { display: none; }
-        .card-folder .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)}; font-style: normal; margin: 0; }
+        .card-folder .card-render blockquote::before { display: none !important; }
+        .card-folder .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)} !important; font-style: normal !important; margin: 0 !important; }
       `);
     }
 

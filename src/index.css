@@ -98,6 +98,15 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  /* 覆盖 Tailwind base 层对 blockquote 的默认样式，避免与 CardStyleEngine 冲突 */
+  .card-render blockquote {
+    border: none;
+    margin: 0;
+    padding: 0;
+    font-style: normal;
+    color: inherit;
+  }
+
   body {
     @apply bg-background text-foreground;
     -webkit-tap-highlight-color: transparent;
@@ -137,14 +146,6 @@ All colors MUST be HSL.
 .card-render h2,
 .card-render h3 {
   font-weight: 600;
-}
-
-.card-render blockquote {
-  border-left: 3px solid hsl(var(--ink-red));
-  padding-left: 12px;
-  margin: 8px 0;
-  font-style: italic;
-  color: hsl(var(--foreground) / 0.8);
 }
 
 .card-render code {
