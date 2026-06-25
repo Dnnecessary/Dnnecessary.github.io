@@ -128,16 +128,6 @@ All colors MUST be HSL.
   }
 }
 
-/* 覆盖 Tailwind base 层对 blockquote 的默认样式，避免与 CardStyleEngine 冲突
-   必须放在 @layer base 之外，否则优先级低于 Tailwind preflight 的裸 blockquote 规则 */
-.card-render blockquote {
-  border: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  font-style: normal !important;
-  color: inherit !important;
-}
-
 /* 墨迹文卡 - 卡片内容渲染样式（.card-render 是实际使用的 class） */
 .card-render {
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
