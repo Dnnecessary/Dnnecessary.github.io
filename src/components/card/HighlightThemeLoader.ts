@@ -1,9 +1,14 @@
 /**
  * highlight.js 代码主题加载：主 CDN + 备用 CDN 双降级。
- * 避免使用 ?raw 静态导入（与平台 Vite 插件存在兼容问题，会导致模块初始化失败）。
+ *
+ * 关键设计：使用 fetch() 获取 CSS 内容后以 <style> 内联，而非 <link> 外链。
+ * 原因：html-to-image 导出时需要把所有外部样式表内联到 DOM 中。
+ * 如果使用 <link>，html-to-image 需要在导出瞬间 fetch CDN 资源，
+ * CDN 不支持 CORS 时 fetch 会挂起导致导出超时。
+ * 使用 <style> 内联后，html-to-image 无需 fetch 任何外部资源。
  *
  * 并发安全：每次调用生成独立 `active` 标志。主题切换时，上一次的回调检测到
- * `active === false` 后立即停止重试，避免多次并发调用互相覆盖 onerror 导致
+ * `active === false` 后立即停止重试，避免多次并发调用互相覆盖导致
  * 降级重试链断裂（场景：用户快速连续切换代码主题）。
  */
 
@@ -32,6 +37,9 @@ const CODE_THEME_URLS: Record<string, string[]> = {
 
 let _currentThemeHandle: { cancel: () => void } | null = null;
 
+/** 已加载的 CSS 缓存，避免重复 fetch 同一 URL */
+const cssCache = new Map<string, string>();
+
 export function loadHighlightTheme(theme: string) {
   // 取消上一次尚未完成的重试链
   if (_currentThemeHandle) {
@@ -41,11 +49,10 @@ export function loadHighlightTheme(theme: string) {
 
   const urls = CODE_THEME_URLS[theme] ?? CODE_THEME_URLS.dark;
   const id = 'hljs-theme';
-  let el = document.getElementById(id) as HTMLLinkElement | null;
+  let el = document.getElementById(id) as HTMLStyleElement | null;
   if (!el) {
-    el = document.createElement('link');
+    el = document.createElement('style');
     el.id = id;
-    el.rel = 'stylesheet';
     document.head.appendChild(el);
   }
 
@@ -54,11 +61,30 @@ export function loadHighlightTheme(theme: string) {
   _currentThemeHandle = { cancel: () => { active = false; } };
 
   let idx = 0;
-  const tryNext = () => {
+  const tryNext = async () => {
     if (!active || idx >= urls.length) return;
-    el!.href = urls[idx];
-    el!.onerror = () => { if (active) { idx++; tryNext(); } };
+    const url = urls[idx];
     idx++;
+
+    // 命中缓存直接内联
+    const cached = cssCache.get(url);
+    if (cached) {
+      el!.textContent = cached;
+      return;
+    }
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const css = await res.text();
+      cssCache.set(url, css);
+      if (active) {
+        el!.textContent = css;
+      }
+    } catch {
+      // 当前 CDN 失败，尝试备用 CDN
+      if (active) tryNext();
+    }
   };
   tryNext();
 }

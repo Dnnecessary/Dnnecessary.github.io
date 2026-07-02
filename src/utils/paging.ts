@@ -258,7 +258,8 @@ export function splitContentIntoPages(
 
   const children = Array.from(contentDiv.children).filter((child) => {
     const el = child as HTMLElement;
-    return el.offsetHeight > 0 && el.innerHTML.trim() !== '';
+    // 保留空段落（用户主动输入的空行），只过滤 offsetHeight 为 0 的不可见元素
+    return el.offsetHeight > 0;
   }) as HTMLElement[];
   if (children.length === 0) {
     document.body.removeChild(measureDiv);
@@ -280,7 +281,7 @@ export function splitContentIntoPages(
     return positions[end].bottom - positions[start].top;
   };
 
-  const availableHeight = Math.max(pageHeight - reservedHeight - 12, 80);
+  const availableHeight = Math.max(pageHeight - reservedHeight - 4, 80);
 
   const pages: string[][] = [];
   let currentPage: string[] = [];

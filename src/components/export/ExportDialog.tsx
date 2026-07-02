@@ -64,10 +64,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
   const [open, setOpen] = useState(false);
 
   const TIMEOUT_BY_SCALE: Record<number, number> = {
-    3: 15_000,
-    4: 25_000,
-    5: 40_000,
-    6: 60_000,
+    2: 15_000,
+    3: 25_000,
+    4: 35_000,
+    5: 50_000,
+    6: 70_000,
   };
 
   function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -83,38 +84,84 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
   }
 
   /**
+   * 导出过滤器：跳过不影响视觉的节点，防止 html-to-image 在这些节点上卡住。
+   * - <script>：脚本不需要导出
+   * - <link>：外部样式表可能导致 CORS fetch 挂起（样式已通过 <style> 内联）
+   * - <meta>：元数据不需要导出
+   */
+  function exportFilter(node: HTMLElement): boolean {
+    const tag = node.tagName;
+    if (tag === 'SCRIPT' || tag === 'LINK' || tag === 'META') return false;
+    return true;
+  }
+
+  /**
    * 将 DOM 元素导出为 Blob
-   * 使用 toCanvas 直接获取 canvas，然后通过原生 toBlob 输出二进制，避免 base64 编码
+   * 关键配置：
+   * - skipFonts: true：跳过字体嵌入（字体已通过 document.fonts.ready 加载，
+   *   html-to-image 尝试 fetch 字体文件会挂起导致超时）
+   * - skipAutoScale: true：跳过自动缩放
+   * - filter: 跳过 script/link/meta 标签
    */
   async function exportElementToBlob(el: HTMLElement, scale: number, fmt: ExportFormat): Promise<Blob> {
     const exportOpts = {
       pixelRatio: scale,
       cacheBust: false,
-      skipAutoScale: false,
+      skipAutoScale: true,
+      skipFonts: true,
+      filter: exportFilter,
       backgroundColor: fmt === 'jpg' ? '#FFFFFF' : undefined,
     };
 
-    const canvas = await withTimeout(
-      toCanvas(el, exportOpts),
-      TIMEOUT_BY_SCALE[scale] ?? 15_000
-    );
-
-    return new Promise<Blob>((resolve, reject) => {
-      const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
-      const quality = fmt === 'jpg' ? 0.92 : undefined;
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error('Canvas 转换为 Blob 失败'));
-          }
-        },
-        mimeType,
-        quality
+    try {
+      const canvas = await withTimeout(
+        toCanvas(el, exportOpts),
+        TIMEOUT_BY_SCALE[scale] ?? 15_000
       );
-    });
+
+      return new Promise<Blob>((resolve, reject) => {
+        const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
+        const quality = fmt === 'jpg' ? 0.92 : undefined;
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Canvas 转换为 Blob 失败'));
+            }
+          },
+          mimeType,
+          quality
+        );
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('超时')) {
+        throw new Error(`导出超时（×${scale}），请降低清晰度后重试`);
+      }
+      throw new Error(`导出失败：${msg}`);
+    }
+  }
+
+  /**
+   * 预热策略：以 scale=1 先渲染一次，强制浏览器缓存图片资源
+   */
+  async function warmupExport(el: HTMLElement, fmt: ExportFormat): Promise<void> {
+    const warmupOpts = {
+      pixelRatio: 1,
+      cacheBust: false,
+      skipAutoScale: true,
+      skipFonts: true,
+      filter: exportFilter,
+      backgroundColor: fmt === 'jpg' ? '#FFFFFF' : undefined,
+    };
+    try {
+      await withTimeout(toCanvas(el, warmupOpts), 15_000);
+    } catch {
+      // 预热失败不阻塞正式导出，只是可能慢一些
+      console.warn('预热阶段失败，继续尝试正式导出');
+    }
   }
 
   /** 整页模式导出 */
@@ -134,6 +181,11 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
     // 等待所有字体加载完成（包括 @font-face 和 FontFace）
     await document.fonts.ready;
 
+    toast.info('正在准备资源…');
+    // 预热：先以 scale=1 渲染，强制缓存字体和 CDN 资源
+    await warmupExport(el, fmt);
+
+    toast.info('开始导出…');
     const blob = await exportElementToBlob(el, scale, fmt);
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -154,9 +206,12 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
 
     // 只有一页时直接导出为单张图片，不打包 ZIP
     if (pages.length === 1) {
-      toast.info('开始导出…');
+      toast.info('正在准备资源…');
       try {
         await document.fonts.ready;
+        // 预热：先以 scale=1 渲染，强制缓存字体和 CDN 资源
+        await warmupExport(pages[0], fmt);
+        toast.info('开始导出…');
         const blob = await exportElementToBlob(pages[0], scale, fmt);
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -167,18 +222,24 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
         toast.success('导出成功！');
       } catch (err) {
         console.error('导出失败', err);
-        toast.error('导出失败，请降低清晰度后重试');
+        const msg = err instanceof Error ? err.message : '未知错误';
+        toast.error(msg, { duration: 6000 });
       }
       return;
     }
 
-    toast.info(`开始导出 ${pages.length} 页，请稍候…`);
-
+    toast.info('正在准备资源…');
     await document.fonts.ready;
+
+    // 预热：只预热第一页，资源缓存后所有页都会受益
+    await warmupExport(pages[0], fmt);
+
+    toast.info(`开始导出 ${pages.length} 页，请稍候…`);
 
     const zip = new JSZip();
     const folder = zip.folder('墨迹文卡');
     let successCount = 0;
+    let lastError = '';
 
     for (let i = 0; i < pages.length; i++) {
       try {
@@ -188,12 +249,13 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ previewRef }) => {
         toast.info(`已导出 ${i + 1} / ${pages.length} 页`);
       } catch (err) {
         console.error(`第 ${i + 1} 页导出失败`, err);
+        lastError = err instanceof Error ? err.message : String(err);
         toast.error(`第 ${i + 1} 页导出失败`);
       }
     }
 
     if (successCount === 0) {
-      toast.error('所有页面导出失败，请降低清晰度后重试');
+      toast.error(lastError || '所有页面导出失败，请降低清晰度后重试', { duration: 6000 });
       return;
     }
 

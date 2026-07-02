@@ -68,7 +68,9 @@ export const CardStyleEngine: React.FC<CardStyleEngineProps> = ({ styles }) => {
 
   // ─── 段落样式 ────────────────────────────────────────────────────────────────
   const paragraphCSS = useMemo(() => {
-    return `.card-render p { margin: 5px 0; color: ${sc(styles.textColor)}; }`;
+    return `
+    .card-render p { margin: 5px 0; color: ${sc(styles.textColor)}; }
+    .card-render p:empty { min-height: 1.5em; }`;
   }, [styles.textColor]);
 
   // ─── 行内元素样式 ────────────────────────────────────────────────────────────
