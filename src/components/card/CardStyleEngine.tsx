@@ -35,7 +35,7 @@ export const CardStyleEngine: React.FC<CardStyleEngineProps> = ({ styles }) => {
     .card-render blockquote::before { display: none !important; }
     .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)} !important; font-style: normal !important; margin: 0 !important; }`
       : `
-    .card-render blockquote { border: none !important; position: relative !important; padding: 12px 16px 12px 22px !important; margin: 10px 0 !important; background: ${blockquoteBg} !important; border-top-left-radius: 8px !important; border-bottom-left-radius: 8px !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; overflow: hidden !important; }
+    .card-render blockquote { border: none !important; position: relative !important; padding: 12px 16px 12px 22px !important; margin: 10px 0 !important; background: ${blockquoteBg} !important; border-radius: 8px !important; overflow: hidden !important; }
     .card-render blockquote::before { content: "" !important; position: absolute !important; left: 0 !important; top: 0 !important; bottom: 0 !important; width: 5px !important; background: ${sc(styles.blockquoteBorder)} !important; border-top-right-radius: 3px !important; border-bottom-right-radius: 3px !important; }
     .card-render blockquote p { color: ${sc(styles.blockquoteText ?? styles.textColor)} !important; font-style: normal !important; margin: 0 !important; }`;
   }, [styles.blockquoteStyle, styles.blockquoteBg, styles.blockquoteBorder, styles.blockquoteText, styles.textColor]);
